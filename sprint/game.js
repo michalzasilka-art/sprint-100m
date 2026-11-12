@@ -6,8 +6,7 @@
 // second is too slow for the leader's line and loses. Four places, each unlocked by winning the one before.
 import * as THREE from '../olympics/common/lib/three.module.min.js';
 import { RoomEnvironment } from '../olympics/common/lib/RoomEnvironment.js';
-import { FURS, POSES } from '../olympics/common/foxino.js';
-import { loadFoxino3D, makeFoxino3D, setFurLayers, furLayers } from '../olympics/common/foxino3d.js';
+import { FURS, POSES, makeFoxino } from '../olympics/common/foxino.js';
 import { makeBlob, makeConfetti } from '../olympics/common/props.js';
 import { sfx, unlock, crowd as crowdSound, setMuted, isMuted } from '../olympics/common/sound.js';
 import { clamp, lerp, damp, smooth, easeInOut } from '../olympics/common/mat.js';
@@ -60,11 +59,10 @@ const hemi = new THREE.HemisphereLight(0xe4f0ff, 0x5a8a45, 1.25); scene.add(hemi
 const key = new THREE.DirectionalLight(0xfff1de, 2.3); key.position.set(20, 30, 30); scene.add(key); scene.add(key.target);
 const rim = new THREE.DirectionalLight(0xffe0b8, 1.0); rim.position.set(-20, 12, -30); scene.add(rim);
 
-// ---------- the runners (the rigged 3D Foxino model; rivals are recoloured foxes) ----------
+// ---------- the runners (the code-built Foxino; rivals are recoloured foxes) ----------
 $('loadText').textContent = 'Warming up the runners…';
-await loadFoxino3D('/olympics/common/models/foxino.glb?v=1', (e) => { if (e.total) $('loadFill').style.width = `${Math.round(80 * e.loaded / e.total)}%`; });
 function makeRunner(def, isMe) {
-  const fox = makeFoxino3D({ colors: FURS[def.fur], fur: def.fur, kit: def.kit });
+  const fox = makeFoxino({ colors: FURS[def.fur], kit: def.kit });
   fox.root.rotation.y = Math.PI / 2;    // face +x
   scene.add(fox.root);
   const blob = makeBlob(1.0, 0.38); scene.add(blob);
@@ -461,9 +459,9 @@ addEventListener('resize', () => { resize(); camSnap = true; });
 function frame(now) {
   requestAnimationFrame(frame);
   const real = Math.min(0.05, (now - last) / 1000); last = now;
-  // too slow: lower the resolution first, then (still slow, page visible) fewer fur layers (4 → 2 → none)
+  // too slow: lower the resolution
   if (real > 0.04 && !document.hidden) {
-    if (++slowFrames > 60) { if (pr > 1) { pr = Math.max(1, pr - 0.25); resize(); } else if (furLayers() > 0) setFurLayers(furLayers() > 2 ? 2 : 0); slowFrames = 0; }
+    if (++slowFrames > 60) { if (pr > 1) { pr = Math.max(1, pr - 0.25); resize(); } slowFrames = 0; }
   } else slowFrames = Math.max(0, slowFrames - 1);
   const dt = real * timeScale;
   t += dt; stT += dt;
