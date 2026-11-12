@@ -7,7 +7,7 @@
 import * as THREE from '../olympics/common/lib/three.module.min.js';
 import { RoomEnvironment } from '../olympics/common/lib/RoomEnvironment.js';
 import { FURS, POSES } from '../olympics/common/foxino.js';
-import { loadFoxino3D, makeFoxino3D } from '../olympics/common/foxino3d.js';
+import { loadFoxino3D, makeFoxino3D, setFurLayers, furLayers } from '../olympics/common/foxino3d.js';
 import { makeBlob, makeConfetti } from '../olympics/common/props.js';
 import { sfx, unlock, crowd as crowdSound, setMuted, isMuted } from '../olympics/common/sound.js';
 import { clamp, lerp, damp, smooth, easeInOut } from '../olympics/common/mat.js';
@@ -236,6 +236,17 @@ function animRunners(dt, t) {
       else P = SP.run(r.ph, k);
     }
     if (P) f.apply(P, state === 'race' ? 22 : 12, dt);
+    // the eyes: down the track while racing, now and then a glance at the rival beside him; the camera otherwise
+    if (f.lookAt) {
+      r.glance = (r.glance || 0) - dt;
+      if (r.glance < -2.5 - (r.lane % 3)) r.glance = 0.6 + Math.random() * 0.6;
+      const racing = state === 'race' || (state === 'done' && !r.finishT);
+      if (racing) {
+        const nb = all.find((o) => o.lane === r.lane + (r.lane > 2 ? -1 : 1));
+        if (r.glance > 0 && nb) _look.set(nb.pos * VIS + 0.5, 1.1, laneZ(nb.lane)); else _look.set(r.pos * VIS + 14, 0.9, laneZ(r.lane));
+      } else _look.copy(camera.position);
+      f.lookAt(_look);
+    }
     f.update(dt, t + r.lane);
     f.root.position.set(r.pos * VIS, 0, laneZ(r.lane));
     // the winner turns to the camera to celebrate
@@ -244,6 +255,7 @@ function animRunners(dt, t) {
     r.blob.position.set(r.pos * VIS + 0.05, 0.015, laneZ(r.lane));
   }
 }
+const _look = new THREE.Vector3();
 const POSE_WARM = (t) => { const k = Math.floor(t / 3) % 4; return k === 3 ? POSES.wave(t) : POSES.ready(t); };
 const CELEBRATE = (t) => POSES.celebrate(t);
 
@@ -449,7 +461,10 @@ addEventListener('resize', () => { resize(); camSnap = true; });
 function frame(now) {
   requestAnimationFrame(frame);
   const real = Math.min(0.05, (now - last) / 1000); last = now;
-  if (real > 0.045 && pr > 1) { if (++slowFrames > 45) { pr = Math.max(1, pr - 0.25); resize(); slowFrames = 0; } } else slowFrames = Math.max(0, slowFrames - 1);
+  // too slow: lower the resolution first, then (still slow, page visible) fewer fur layers (4 → 2 → none)
+  if (real > 0.04 && !document.hidden) {
+    if (++slowFrames > 60) { if (pr > 1) { pr = Math.max(1, pr - 0.25); resize(); } else if (furLayers() > 0) setFurLayers(furLayers() > 2 ? 2 : 0); slowFrames = 0; }
+  } else slowFrames = Math.max(0, slowFrames - 1);
   const dt = real * timeScale;
   t += dt; stT += dt;
   if (state === 'intro' && stT > 2.4) { setPhase('marks'); bannerWord('On your marks…', 'small'); crowdSound(0.12); }

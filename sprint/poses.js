@@ -27,6 +27,13 @@ export const SP = {
     p.kneeL[0] += e * 0.6 * Math.max(0, -Math.sin(ph - 1)); p.kneeR[0] += e * 0.6 * Math.max(0, Math.sin(ph - 1));
     p.spine[0] = 0.12 + 0.18 * k;
     p.y -= 0.02 * e;
+    // feet: toes point down as a foot pushes off behind him, and lift as it swings through
+    const kk = Math.min(1.2, k);
+    p.ankleL = [0.1 + (0.6 * Math.max(0, -s) - 0.35 * Math.max(0, s)) * kk, 0, 0];
+    p.ankleR = [0.1 + (0.6 * Math.max(0, s) - 0.35 * Math.max(0, -s)) * kk, 0, 0];
+    // elbows pump: more bent as the arm comes forward
+    p.elbowL = [-1.05 - 0.45 * Math.max(0, -s) * kk, 0, 0];
+    p.elbowR = [-1.05 - 0.45 * Math.max(0, s) * kk, 0, 0];
     p.tail = s * 0.6;
     return p;
   },
